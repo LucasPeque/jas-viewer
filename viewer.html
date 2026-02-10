@@ -43,7 +43,11 @@ body {
   padding: 12px;
   border-radius: 8px;
   white-space: pre-wrap;
+  color: #f9fafb;
+  font-size: 15px;
+  min-height: 60px;
 }
+
 .attachments {
   margin-top: 16px;
 }
@@ -130,7 +134,10 @@ async function loadRecord() {
     species.innerText = record.species;
     clinic.innerText = record.clinicName;
     date.innerText = new Date(record.timestamp).toLocaleString();
-    history.innerText = record.medicalNotes;
+    history.innerText = record.medicalNotes && record.medicalNotes.trim() !== ""
+  ? record.medicalNotes
+  : "— Sin observaciones clínicas —";
+
 
     if (data.attachments.length > 0) {
       const attDiv = document.getElementById("attachments");
@@ -168,3 +175,4 @@ loadRecord();
 
 </body>
 </html>
+

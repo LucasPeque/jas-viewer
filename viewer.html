@@ -134,9 +134,16 @@ async function loadRecord() {
     species.innerText = record.species;
     clinic.innerText = record.clinicName;
     date.innerText = new Date(record.timestamp).toLocaleString();
-    history.innerText = record.medicalNotes && record.medicalNotes.trim() !== ""
-  ? record.medicalNotes
-  : "— Sin observaciones clínicas —";
+    const notes =
+  typeof record.medicalNotes === "string"
+    ? record.medicalNotes
+    : "";
+
+history.textContent =
+  notes.trim().length > 0
+    ? notes
+    : "— Sin observaciones clínicas —";
+
 
 
     if (data.attachments.length > 0) {
@@ -165,7 +172,7 @@ async function loadRecord() {
   } catch (e) {
     loading.style.display = "none";
     error.style.display = "block";
-    error.innerText = "Error al cargar el historial";
+    error.innerText = "Error mostrar el historial";
     console.error(e);
   }
 }
@@ -175,4 +182,5 @@ loadRecord();
 
 </body>
 </html>
+
 

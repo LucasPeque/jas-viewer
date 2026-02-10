@@ -1,63 +1,71 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>J.A.S - Historial Veterinario</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      margin: 0;
-      padding: 20px;
-      color: #e5e7eb;
-    }
-    .card {
-      max-width: 420px;
-      margin: 40px auto;
-      background: #111827;
-      border-radius: 16px;
-      border: 2px solid #16a34a;
-      padding: 24px;
-    }
-    .header {
-      background: #16a34a;
-      color: white;
-      padding: 20px;
-      border-radius: 12px;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .field {
-      margin-bottom: 12px;
-    }
-    .label {
-      font-weight: bold;
-      color: #9ca3af;
-    }
-    .value {
-      margin-top: 4px;
-    }
-    .history {
-      background: #1f2937;
-      padding: 12px;
-      border-radius: 8px;
-      white-space: pre-wrap;
-      margin-top: 8px;
-    }
-    .loading {
-      text-align: center;
-      padding: 40px;
-    }
-    .error {
-      background: #7f1d1d;
-      padding: 16px;
-      border-radius: 8px;
-      color: #fecaca;
-      text-align: center;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>J.A.S – Historial Veterinario</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  margin: 0;
+  padding: 20px;
+}
+.card {
+  max-width: 420px;
+  margin: auto;
+  background: #111827;
+  border-radius: 16px;
+  border: 2px solid #16a34a;
+  padding: 24px;
+}
+.header {
+  background: #16a34a;
+  color: white;
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+}
+.field {
+  margin-top: 14px;
+}
+.label {
+  font-weight: bold;
+  color: #9ca3af;
+}
+.value {
+  margin-top: 4px;
+}
+.history {
+  background: #1f2937;
+  padding: 12px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+}
+.attachments {
+  margin-top: 16px;
+}
+.attachments a {
+  display: block;
+  margin-top: 6px;
+  color: #93c5fd;
+}
+.loading {
+  text-align: center;
+  padding: 40px;
+}
+.error {
+  background: #7f1d1d;
+  padding: 16px;
+  border-radius: 8px;
+  color: #fecaca;
+  text-align: center;
+}
+</style>
 </head>
+
 <body>
 
 <div class="card">
@@ -76,58 +84,86 @@
     <div class="field"><div class="label">Clínica</div><div class="value" id="clinic"></div></div>
     <div class="field"><div class="label">Fecha</div><div class="value" id="date"></div></div>
     <div class="field"><div class="label">Historial médico</div><div class="history" id="history"></div></div>
+
+    <div class="attachments" id="attachments"></div>
   </div>
 
   <div id="error" class="error" style="display:none;"></div>
 </div>
 
 <script>
-async function load() {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const cid = params.get("cid");
-    const key = JSON.parse(atob(params.get("key")));
-    const iv = JSON.parse(atob(params.get("iv")));
+function getParam(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}
 
-    if (!cid || !key || !iv) throw "Parámetros inválidos";
+async function decryptData(cipherBytes, keyBytes, ivBytes) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new Uint8Array(keyBytes),
+    "AES-GCM",
+    false,
+    ["decrypt"]
+  );
+
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: new Uint8Array(ivBytes) },
+    key,
+    cipherBytes
+  );
+
+  return JSON.parse(new TextDecoder().decode(decrypted));
+}
+
+async function loadRecord() {
+  try {
+    const cid = getParam("cid");
+    const key = JSON.parse(atob(getParam("key")));
+    const iv = JSON.parse(atob(getParam("iv")));
 
     const res = await fetch(`https://ipfs.io/ipfs/${cid}`);
     const buffer = await res.arrayBuffer();
+    const data = await decryptData(new Uint8Array(buffer), key, iv);
 
-    const cryptoKey = await crypto.subtle.importKey(
-      "raw",
-      new Uint8Array(key),
-      "AES-GCM",
-      false,
-      ["decrypt"]
-    );
+    const record = data.record;
 
-    const decrypted = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: new Uint8Array(iv) },
-      cryptoKey,
-      buffer
-    );
+    petName.innerText = record.name;
+    species.innerText = record.species;
+    clinic.innerText = record.clinicName;
+    date.innerText = new Date(record.timestamp).toLocaleString();
+    history.innerText = record.medicalNotes;
 
-    const data = JSON.parse(new TextDecoder().decode(decrypted));
+    if (data.attachments.length > 0) {
+      const attDiv = document.getElementById("attachments");
+      attDiv.innerHTML = "<div class='label'>Archivos adjuntos</div>";
 
-    document.getElementById("petName").innerText = data.name;
-    document.getElementById("species").innerText = data.species;
-    document.getElementById("clinic").innerText = data.clinicName;
-    document.getElementById("date").innerText = new Date(data.timestamp).toLocaleString();
-    document.getElementById("history").innerText = data.medicalNotes;
+      for (const file of data.attachments) {
+        const blob = new Blob(
+          [new Uint8Array(file.data)],
+          { type: file.type }
+        );
+        const url = URL.createObjectURL(blob);
 
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("content").style.display = "block";
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        a.textContent = "📎 " + file.name;
+
+        attDiv.appendChild(a);
+      }
+    }
+
+    loading.style.display = "none";
+    content.style.display = "block";
 
   } catch (e) {
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("error").style.display = "block";
-    document.getElementById("error").innerText = "Error al cargar el historial";
+    loading.style.display = "none";
+    error.style.display = "block";
+    error.innerText = "Error al cargar el historial";
     console.error(e);
   }
 }
 
-load();
+loadRecord();
 </script>
 
 </body>

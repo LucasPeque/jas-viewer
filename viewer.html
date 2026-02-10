@@ -129,7 +129,11 @@ async function loadRecord() {
     const data = await decryptData(new Uint8Array(buffer), key, iv);
 
     const record = data.record;
+console.log("DATA COMPLETA DESCIFRADA:", data);
+console.log("RECORD:", record);
+console.log("CLAVES EN RECORD:", Object.keys(record));
 
+    
     petName.innerText = record.name;
     species.innerText = record.species;
     clinic.innerText = record.clinicName;
@@ -182,5 +186,6 @@ loadRecord();
 
 </body>
 </html>
+
 
 

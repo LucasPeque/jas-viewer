@@ -87,7 +87,8 @@ body {
     <div class="field"><div class="label">Especie</div><div class="value" id="species"></div></div>
     <div class="field"><div class="label">Clínica</div><div class="value" id="clinic"></div></div>
     <div class="field"><div class="label">Fecha</div><div class="value" id="date"></div></div>
-    <div class="field"><div class="label">Historial médico</div><div class="history" id="history"></div></div>
+    <!-- CAMBIADO: id="history" → id="medicalHistory" -->
+    <div class="field"><div class="label">Historial médico</div><div class="history" id="medicalHistory"></div></div>
 
     <div class="attachments" id="attachments"></div>
   </div>
@@ -129,28 +130,34 @@ async function loadRecord() {
     const data = await decryptData(new Uint8Array(buffer), key, iv);
 
     const record = data.record;
-console.log("DATA COMPLETA DESCIFRADA:", data);
-console.log("RECORD:", record);
-console.log("CLAVES EN RECORD:", Object.keys(record));
+    console.log("DATA COMPLETA DESCIFRADA:", data);
+    console.log("RECORD:", record);
+    console.log("CLAVES EN RECORD:", Object.keys(record));
 
-    
+    // Obtener referencias a los elementos DOM
+    const petName = document.getElementById("petName");
+    const species = document.getElementById("species");
+    const clinic = document.getElementById("clinic");
+    const date = document.getElementById("date");
+    // CAMBIADO: Obtener el elemento por su nuevo id
+    const medicalHistoryEl = document.getElementById("medicalHistory");
+    const loading = document.getElementById("loading");
+    const content = document.getElementById("content");
+    const error = document.getElementById("error");
+
     petName.innerText = record.name;
     species.innerText = record.species;
     clinic.innerText = record.clinicName;
     date.innerText = new Date(record.timestamp).toLocaleString();
-    const notes =
-  typeof record.medicalNotes === "string"
-    ? record.medicalNotes
-    : "";
+    
+    const notes = typeof record.medicalNotes === "string" ? record.medicalNotes : "";
+    
+    // CAMBIADO: Usar medicalHistoryEl en lugar de history
+    medicalHistoryEl.textContent = notes.trim().length > 0
+      ? notes
+      : "— Sin observaciones clínicas —";
 
-history.textContent =
-  notes.trim().length > 0
-    ? notes
-    : "— Sin observaciones clínicas —";
-
-
-
-    if (data.attachments.length > 0) {
+    if (data.attachments && data.attachments.length > 0) {
       const attDiv = document.getElementById("attachments");
       attDiv.innerHTML = "<div class='label'>Archivos adjuntos</div>";
 
@@ -176,7 +183,7 @@ history.textContent =
   } catch (e) {
     loading.style.display = "none";
     error.style.display = "block";
-    error.innerText = "Error mostrar el historial";
+    error.innerText = "Error al mostrar el historial";
     console.error(e);
   }
 }
@@ -186,6 +193,3 @@ loadRecord();
 
 </body>
 </html>
-
-
-
